@@ -1,0 +1,91 @@
+name: iOS Build
+
+# Сборка unsigned IPA для iPhone на macOS-runner'е GitHub Actions.
+# Запуск:
+#   • вручную через GitHub UI (workflow_dispatch)
+#   • при push тэга вида v0.1.0
+#
+# Требования: ничего не нужно настраивать заранее (на runner'е уже
+# установлен Xcode/CocoaPods/Swift). Rust toolchain ставится в шаге
+# с iOS-таргетами.
+#
+# Результат: артефакт `Ultimate-ios.ipa` — unsigned IPA. Установить можно
+# через Sideloadly / AltStore (требует Apple ID, бесплатно, 7-дневный лимит)
+# или подписать своим Apple Developer-сертификатом ($99/год) для App Store.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust-core/target
+            flutter-app/rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
+
+      - name: Flutter pub get
+        working-directory: flutter-app
+        run: flutter pub get
+
+      - name: Generate FRB bindings
+        working-directory: flutter-app
+        run: flutter_rust_bridge_codegen generate
+
+      - name: Build IPA (unsigned)
+        working-directory: flutter-app
+        run: flutter build ipa --release --no-codesign
+
+      - name: Repackage build/ios/archive into .ipa
+        # flutter build ipa --no-codesign оставляет .xcarchive без экспорта
+        # в IPA. Делаем zip вручную из Payload директории.
+        working-directory: flutter-app
+        run: |
+          set -e
+          ARCHIVE=$(find build/ios/archive -name "*.xcarchive" | head -1)
+          if [ -z "$ARCHIVE" ]; then
+            echo "No xcarchive found"
+            exit 1
+          fi
+          mkdir -p build/ios/ipa-unsigned/Payload
+          cp -R "$ARCHIVE/Products/Applications/Runner.app" \
+                build/ios/ipa-unsigned/Payload/
+          cd build/ios/ipa-unsigned
+          zip -qry Ultimate-unsigned.ipa Payload
+          ls -lh Ultimate-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ultimate-ios-unsigned
+          path: flutter-app/build/ios/ipa-unsigned/Ultimate-unsigned.ipa
+          retention-days: 30

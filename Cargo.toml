@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["rust-core", "flutter-app/rust"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Stocksi"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,45 @@
+[package]
+name = "stocksi_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+# FFI bridge к Flutter
+flutter_rust_bridge = "=2.12.0"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bitcode = { version = "0.6", features = ["serde", "derive"] }
+lz4_flex = "0.11"
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
+futures = "0.3"
+async-stream = "0.3"
+
+# WebSocket (Tokio-native, без web-sys)
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+
+# Хранилище
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Regex для подсветки
+regex = "1"
+
+# Логирование
+log = "0.4"
+env_logger = "0.11"
+
+# Дата/время
+chrono = { version = "0.4", features = ["serde"] }
+
+# Утилиты
+anyhow = "1"
+thiserror = "1"
+once_cell = "1"

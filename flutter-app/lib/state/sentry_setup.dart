@@ -1,10 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-/// DSN читается из --dart-define=SENTRY_DSN=... при сборке.
-/// Если не задан — Sentry не инициализируется (no-op), приложение работает
-/// как обычно. Так удобно: дев-сборки не шлют события в production-проект.
-const _dsn = String.fromEnvironment('SENTRY_DSN', defaultValue: '');
+/// DSN GlitchTip-проекта. По умолчанию используется наш production-эндпоинт.
+/// При желании можно переопределить через --dart-define=SENTRY_DSN=... при
+/// сборке (например, использовать отдельный dev-проект для тест-событий).
+///
+/// DSN не является секретом: SDK шлёт на host из этого URL, "слив" даёт
+/// максимум возможность отправлять поддельные события — управляется через
+/// rate-limit в GlitchTip project settings.
+const _dsn = String.fromEnvironment(
+  'SENTRY_DSN',
+  defaultValue:
+      'https://b832a578b54c47d69a2bf4264af9385a@app.glitchtip.com/22962',
+);
 
 /// Инициализирует Sentry если задан DSN, и запускает [appRunner].
 /// Если DSN пуст — просто запускает [appRunner] напрямую.

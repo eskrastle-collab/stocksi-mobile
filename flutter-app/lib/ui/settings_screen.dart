@@ -1072,33 +1072,6 @@ class _AboutTab extends ConsumerWidget {
         ],
         const Divider(),
         ListTile(
-          leading: const Icon(Icons.bug_report_outlined, size: 20),
-          title: const Text('Тестовая ошибка'),
-          subtitle: const Text(
-            'Отправить test-событие в GlitchTip — проверка что reporting работает',
-            style: TextStyle(fontSize: 12),
-          ),
-          onTap: () {
-            // Намеренно бросаем исключение — Sentry/GlitchTip SDK поймает
-            // его через FlutterError.onError или uncaught zone error.
-            // Через 30-60 сек должно появиться в дашборде.
-            Future<void>(() {
-              throw Exception(
-                'Test error from Settings → Прочее: ${DateTime.now()}',
-              );
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Test-ошибка отправлена. Проверь GlitchTip dashboard через минуту.',
-                ),
-                duration: Duration(seconds: 3),
-              ),
-            );
-          },
-        ),
-        const Divider(),
-        ListTile(
           leading: const Icon(Icons.refresh, size: 20),
           title: const Text('Обновить сессию'),
           subtitle: const Text(

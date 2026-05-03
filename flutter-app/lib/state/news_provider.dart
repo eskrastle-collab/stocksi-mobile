@@ -8,6 +8,7 @@ import 'auth_provider.dart';
 import 'notification_service.dart';
 import 'sound_service.dart';
 import 'text_highlight.dart';
+import 'widget_service.dart';
 
 /// Состояние подключения к серверу.
 enum ConnectionStatus { idle, connecting, connected, disconnected, error }
@@ -194,6 +195,9 @@ class NewsStreamController extends StateNotifier<List<StoringNews>> {
       if (!drop) kept.add(n);
     }
     state = kept;
+    // Обновляем home screen widget — топ-3 видимых новостей.
+    // No-op на платформах кроме Android.
+    widgetService.updateNews(kept);
   }
 
   Future<void> _startFromStorage() async {
@@ -272,6 +276,9 @@ class NewsStreamController extends StateNotifier<List<StoringNews>> {
           ref.read(recentNewsIdsProvider.notifier).state = {...recent, n.id};
         }
         state = [n, ...state];
+        // Обновляем home widget сразу — пользователь увидит свежий заголовок
+        // на главном экране без открытия приложения.
+        widgetService.updateNews(state);
 
         if (_historyLoaded) {
           // Звук — после рендера, не блокируем UI
@@ -309,11 +316,13 @@ class NewsStreamController extends StateNotifier<List<StoringNews>> {
         final set = ids.toSet();
         _rawList = _rawList.where((n) => !set.contains(n.id)).toList();
         state = state.where((n) => !set.contains(n.id)).toList();
+        widgetService.updateNews(state);
       },
       newsUpdated: (n) {
         // Заменяем в raw и в видимом state одноимённую запись
         _rawList = _rawList.map((x) => x.id == n.id ? n : x).toList();
         state = state.map((x) => x.id == n.id ? n : x).toList();
+        widgetService.updateNews(state);
       },
       sourceListUpdated: (groups) {
         // Rust автосохраняет в NewsSettings.source_list.

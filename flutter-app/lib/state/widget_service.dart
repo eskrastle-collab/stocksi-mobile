@@ -10,7 +10,9 @@ import '../src/rust/api/simple.dart';
 /// На других платформах — no-op.
 class WidgetService {
   static const _androidName = 'NewsWidgetProvider';
-  static const _slots = 3;
+  // 7 слотов — провайдер сам решает сколько показать в зависимости от
+  // высоты виджета, выбранной пользователем при ресайзе.
+  static const _slots = 7;
 
   bool get isSupported => !kIsWeb && Platform.isAndroid;
 

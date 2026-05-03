@@ -10,13 +10,15 @@ import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
+import org.json.JSONArray
 
 /**
  * AppWidgetProvider для виджета «Последние новости Stocksi».
  *
  * Адаптивный — показывает от 1 до 7 новостей в зависимости от высоты,
- * выбранной пользователем при ресайзе. Сами данные пишутся Flutter-стороной
- * через пакет `home_widget` в SharedPreferences.
+ * выбранной пользователем при ресайзе. Данные приходят от Flutter в виде
+ * JSON-строки в SharedPreferences ключе "news_json" (массив объектов с
+ * полями id, ticker, title, time).
  */
 class NewsWidgetProvider : HomeWidgetProvider() {
     override fun onUpdate(
@@ -36,8 +38,6 @@ class NewsWidgetProvider : HomeWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle
     ) {
-        // Юзер растянул/сжал виджет — пересчитываем количество видимых
-        // слотов и перерисовываем.
         val widgetData =
             context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
         renderWidget(context, appWidgetManager, appWidgetId, widgetData)
@@ -51,27 +51,23 @@ class NewsWidgetProvider : HomeWidgetProvider() {
     ) {
         val views = RemoteViews(context.packageName, R.layout.news_widget)
 
-        // Сколько слотов показывать = f(высота виджета). Минимум по
-        // OPTION_APPWIDGET_MIN_HEIGHT — это размер при portrait. Используем его
-        // как «гарантированную» высоту.
         val opts = appWidgetManager.getAppWidgetOptions(appWidgetId)
         val minHeightDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
         val visibleSlots = computeVisibleSlots(minHeightDp)
 
-        // Скрываем/показываем все 7 слотов
+        // Парсим JSON-массив новостей; если пусто или ошибка — показываем заглушку.
+        val newsArr = try {
+            val raw = widgetData.getString("news_json", null)
+            if (raw.isNullOrEmpty()) JSONArray() else JSONArray(raw)
+        } catch (_: Exception) {
+            JSONArray()
+        }
+
         val slotIds = intArrayOf(
             R.id.news_slot_1, R.id.news_slot_2, R.id.news_slot_3,
             R.id.news_slot_4, R.id.news_slot_5, R.id.news_slot_6,
             R.id.news_slot_7
         )
-        for (i in 0 until 7) {
-            views.setViewVisibility(
-                slotIds[i],
-                if (i < visibleSlots) View.VISIBLE else View.GONE
-            )
-        }
-
-        // Заполняем видимые слоты данными
         val titleIds = intArrayOf(
             R.id.news_1_title, R.id.news_2_title, R.id.news_3_title,
             R.id.news_4_title, R.id.news_5_title, R.id.news_6_title,
@@ -88,13 +84,21 @@ class NewsWidgetProvider : HomeWidgetProvider() {
             R.id.news_7_time
         )
 
-        for (i in 0 until visibleSlots) {
-            val title = widgetData.getString("news_${i}_title", null)
-            val ticker = widgetData.getString("news_${i}_ticker", "") ?: ""
-            val time = widgetData.getString("news_${i}_time", "") ?: ""
-            val newsId = widgetData.getString("news_${i}_id", null)
+        for (i in 0 until 7) {
+            views.setViewVisibility(
+                slotIds[i],
+                if (i < visibleSlots) View.VISIBLE else View.GONE
+            )
+        }
 
-            if (title.isNullOrEmpty()) {
+        for (i in 0 until visibleSlots) {
+            val item = if (i < newsArr.length()) newsArr.optJSONObject(i) else null
+            val title = item?.optString("title") ?: ""
+            val ticker = item?.optString("ticker") ?: ""
+            val time = item?.optString("time") ?: ""
+            val newsId = item?.optString("id") ?: ""
+
+            if (title.isEmpty()) {
                 views.setTextViewText(
                     titleIds[i],
                     if (i == 0) "Откройте приложение, чтобы загрузить новости" else ""
@@ -106,7 +110,7 @@ class NewsWidgetProvider : HomeWidgetProvider() {
                 views.setTextViewText(tickerIds[i], ticker)
                 views.setTextViewText(timeIds[i], time)
 
-                if (!newsId.isNullOrEmpty()) {
+                if (newsId.isNotEmpty()) {
                     val pendingIntent = HomeWidgetLaunchIntent.getActivity(
                         context,
                         MainActivity::class.java,
@@ -117,14 +121,12 @@ class NewsWidgetProvider : HomeWidgetProvider() {
             }
         }
 
-        // Refresh-кнопка → broadcast в Dart background callback
         val refreshIntent = HomeWidgetBackgroundIntent.getBroadcast(
             context,
             Uri.parse("stocksi://refresh")
         )
         views.setOnClickPendingIntent(R.id.widget_refresh, refreshIntent)
 
-        // Tap по шапке — открыть app
         val openAppIntent = HomeWidgetLaunchIntent.getActivity(
             context,
             MainActivity::class.java,
@@ -135,10 +137,6 @@ class NewsWidgetProvider : HomeWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    /**
-     * Эмпирические пороги: header (~36dp) + N×(~50dp слот) + padding (~20dp).
-     * Округлено в нижнюю сторону, чтобы виджет точно не переполнялся.
-     */
     private fun computeVisibleSlots(heightDp: Int): Int = when {
         heightDp < 110 -> 1
         heightDp < 160 -> 2

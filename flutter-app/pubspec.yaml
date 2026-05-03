@@ -31,7 +31,6 @@ dependencies:
   auto_updater: ^1.0.0
   flutter_foreground_task: ^8.10.0
   sentry_flutter: ^8.10.0
-  home_widget: ^0.7.0
   freezed_annotation: ^2.4.1
   rust_lib_stocksi_mobile:
     path: rust_builder

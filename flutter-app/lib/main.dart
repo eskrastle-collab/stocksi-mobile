@@ -11,6 +11,7 @@ import 'state/auth_provider.dart';
 import 'state/background_service.dart';
 import 'state/news_provider.dart';
 import 'state/notification_service.dart';
+import 'state/sentry_setup.dart';
 import 'state/sound_service.dart';
 import 'state/tray_service.dart';
 import 'state/updater_service.dart';
@@ -18,6 +19,12 @@ import 'ui/news_list_screen.dart';
 import 'ui/token_screen.dart';
 
 Future<void> main() async {
+  // Sentry оборачивает всё main — ловит необработанные исключения и крашит.
+  // Если SENTRY_DSN не задан при сборке — Sentry no-op, app работает как обычно.
+  await runWithSentry(_main);
+}
+
+Future<void> _main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Desktop-специфика: инициализируем window_manager до Rust/UI чтобы окно
   // настроилось корректно (preventClose — для сворачивания в трей).

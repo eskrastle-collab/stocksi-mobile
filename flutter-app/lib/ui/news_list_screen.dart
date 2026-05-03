@@ -49,9 +49,10 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
   }
 
   Future<void> _handleRefresh() async {
-    // Ловим следующее обновление от WS — сервер сам пришлёт NewsHistory
-    // если нужно, но для POC просто ждём 600мс и сбрасываем pull-to-refresh.
-    await Future.delayed(const Duration(milliseconds: 600));
+    // forceReconnect рвёт WS, ждёт 3 сек чтобы сервер увидел разрыв,
+    // потом подключается заново. По возвращении приходит NewsHistory →
+    // лента обновится. Pull-индикатор сбрасывается когда future завершён.
+    await ref.read(newsControllerProvider.notifier).forceReconnect();
   }
 
   void _scrollToTop() {
@@ -311,6 +312,17 @@ class _BottomBar extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           _ConnectionDot(status: status),
+          // Кнопка-дубликат «Обновить сессию» рядом со статусом — для быстрого
+          // ручного reconnect без захода в настройки.
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            constraints: const BoxConstraints(),
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Обновить сессию',
+            onPressed: () =>
+                ref.read(newsControllerProvider.notifier).forceReconnect(),
+          ),
           const Spacer(),
           // Быстрый переключатель темы (тёмная ↔ светлая).
           Builder(builder: (_) {

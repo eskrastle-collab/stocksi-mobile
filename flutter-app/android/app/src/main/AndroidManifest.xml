@@ -5,6 +5,11 @@
     <!-- Для показа уведомлений о новостях (Android 13+ требует явного разрешения). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Для ForegroundService который держит WS-подключение живым когда
+         приложение свёрнуто / экран заблокирован. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
         android:label="Ultimate"
         android:name="${applicationName}"

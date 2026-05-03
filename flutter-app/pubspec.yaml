@@ -1,7 +1,7 @@
 name: stocksi_mobile
 description: Stocksi Ultimate для мобильных устройств
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -29,6 +29,7 @@ dependencies:
   tray_manager: ^0.2.3
   window_manager: ^0.4.2
   auto_updater: ^1.0.0
+  flutter_foreground_task: ^8.10.0
   freezed_annotation: ^2.4.1
   rust_lib_stocksi_mobile:
     path: rust_builder

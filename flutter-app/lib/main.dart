@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'src/rust/frb_generated.dart';
 import 'state/auth_provider.dart';
+import 'state/background_service.dart';
 import 'state/news_provider.dart';
 import 'state/notification_service.dart';
 import 'state/sound_service.dart';
@@ -60,6 +61,16 @@ Future<void> main() async {
     await notificationService.init();
   } catch (e) {
     debugPrint('[init] notifications init failed: $e');
+  }
+  // Background service: инициализация конфига всегда, но запуск только если
+  // пользователь явно включил «Получать новости в фоне» в настройках.
+  try {
+    await backgroundService.init();
+    if (await backgroundService.isEnabledByUser()) {
+      await backgroundService.start();
+    }
+  } catch (e) {
+    debugPrint('[init] background init failed: $e');
   }
   if (isDesktop) {
     try {

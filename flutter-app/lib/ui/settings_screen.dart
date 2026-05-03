@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../src/rust/api/simple.dart';
 import '../state/auth_provider.dart';
+import '../state/background_service.dart';
 import '../state/news_provider.dart';
 import '../state/notification_service.dart';
 import '../state/sound_service.dart';
@@ -628,6 +629,21 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
   late String _sound = soundService.currentSound;
   late double _volume = soundService.volume;
 
+  bool _bgEnabled = false;
+  bool _bgLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    backgroundService.isEnabledByUser().then((v) {
+      if (!mounted) return;
+      setState(() {
+        _bgEnabled = v;
+        _bgLoaded = true;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final alertsAsync = ref.watch(_alertsProvider);
@@ -691,6 +707,44 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
             ),
           ),
         ),
+        if (backgroundService.isSupported && _bgLoaded) ...[
+          const Divider(height: 20),
+          InkWell(
+            onTap: () async {
+              final v = !_bgEnabled;
+              setState(() => _bgEnabled = v);
+              await backgroundService.setEnabled(v);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Получать новости в фоне'),
+                        SizedBox(height: 2),
+                        Text(
+                          'Не давать Android выгружать приложение когда экран '
+                          'заблокирован — иначе пуши перестают приходить',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  CompactSwitch(
+                    value: _bgEnabled,
+                    onChanged: (v) async {
+                      setState(() => _bgEnabled = v);
+                      await backgroundService.setEnabled(v);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const Divider(height: 20),
         InkWell(
           onTap: () => toggleSound(!soundEnabled),

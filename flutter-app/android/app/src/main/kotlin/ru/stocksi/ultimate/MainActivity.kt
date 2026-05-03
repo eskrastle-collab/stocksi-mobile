@@ -1,4 +1,4 @@
-package com.example.stocksi_mobile
+package ru.stocksi.ultimate
 
 import io.flutter.embedding.android.FlutterActivity
 

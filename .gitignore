@@ -4,6 +4,7 @@ flutter/
 # Build artifacts (Rust + Flutter)
 target/
 flutter-app/build/
+flutter-app/.sentry-native/
 flutter-app/.dart_tool/
 flutter-app/.flutter-plugins
 flutter-app/.flutter-plugins-dependencies

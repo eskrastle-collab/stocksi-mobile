@@ -23,10 +23,11 @@ variables:
     FLUTTER_BIN: 'C:\Flutter\flutter\bin'
     CARGO_BIN: 'C:\Users\eskra\.cargo\bin'
     ANDROID_SDK_ROOT: 'C:\Users\eskra\AppData\Local\Android\Sdk'
+    GIT_BIN: 'C:\Program Files\Git\cmd'
   before_script:
     # GitLab service запускается с минимальным PATH — добавляем все нужные
-    # toolchain'ы явно. Все пути привязаны к этой машине.
-    - $env:PATH = "$env:JAVA_HOME\bin;$env:FLUTTER_BIN;$env:CARGO_BIN;$env:ANDROID_SDK_ROOT\platform-tools;$env:PATH"
+    # toolchain'ы явно (git нужен Flutter'у для определения engine version).
+    - $env:PATH = "$env:GIT_BIN;$env:JAVA_HOME\bin;$env:FLUTTER_BIN;$env:CARGO_BIN;$env:ANDROID_SDK_ROOT\platform-tools;$env:PATH"
     - flutter --version
     - cd flutter-app
     - flutter pub get

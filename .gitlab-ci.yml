@@ -14,23 +14,23 @@ stages:
   - build
 
 variables:
-  FLUTTER_VERSION: "3.27.0"
   GIT_DEPTH: 10
 
-# Шаблон базового окружения. Используем образ Cirrus Labs — там предустановлены
-# Flutter, Android SDK, OpenJDK 17. Поверх ставим Rust toolchain.
+# Шаблон базового окружения. Образ ghcr.io/cirruslabs/flutter:stable содержит
+# Flutter SDK, Android SDK, OpenJDK 17. Версия Flutter — последняя stable.
+# (Раньше брали :3.27.0, но конкретные patch-теги в этом registry не всегда
+# доступны, а stable обновляется вместе с pub-каналом.)
 .flutter-android:
-  image: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+  image: ghcr.io/cirruslabs/flutter:stable
   before_script:
+    - which flutter || (echo "flutter not in PATH, searching..." && find / -name "flutter" -type f 2>/dev/null | head -5)
+    - flutter --version
     - apt-get update -qq && apt-get install -y --no-install-recommends curl build-essential pkg-config libssl-dev unzip
     # Rust toolchain + Android targets
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
     - source "$HOME/.cargo/env"
     - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-    # flutter_rust_bridge codegen
     - cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
-    # Кэш, чтобы рефренды dart_tool/build не ломали билды
-    - flutter --version
     - cd flutter-app
     - flutter pub get
     - flutter_rust_bridge_codegen generate

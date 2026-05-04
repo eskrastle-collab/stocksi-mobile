@@ -1,82 +1,42 @@
 # GitLab CI: автосборка Android (AAB + APK) на push в main или тэг.
-# iOS собирается через GitHub Actions на macOS-runner (см. .github/workflows/).
+# Запускается на self-hosted shell-runner'е на Windows (тэг `windows`).
+# На машине ожидаются установленные: Flutter, JDK 17, Android SDK, Rust,
+# flutter_rust_bridge_codegen, а также keystore по локальному пути.
 #
-# Перед использованием — добавить в GitLab Settings → CI/CD → Variables:
-#   KEYSTORE_BASE64     (file) — содержимое keystore/stocksi-upload.jks в base64
-#   KEYSTORE_PASSWORD   (masked, protected)
-#   KEY_PASSWORD        (masked, protected)
-#   KEY_ALIAS           (masked, protected) — обычно "upload"
-#
-# Бесплатный тир GitLab.com даёт 400 минут/мес. Один билд ~10 мин,
-# хватит на 40 релизов.
+# iOS — отдельно через GitHub Actions на macOS-runner'е.
 
 stages:
   - build
 
 variables:
   GIT_DEPTH: 10
+  # Локальные пути на этой машине разработчика — сюда CI копирует keystore
+  # (gitignored) перед сборкой подписанных артефактов.
+  LOCAL_KEYSTORE_DIR: 'C:\Users\eskra\Downloads\stocksi-mobile\flutter-app\keystore'
+  LOCAL_KEY_PROPERTIES: 'C:\Users\eskra\Downloads\stocksi-mobile\flutter-app\android\key.properties'
+  JAVA_HOME: 'C:\Users\eskra\jdk\jdk-17.0.12+7'
 
-# Шаблон базового окружения. Образ ghcr.io/cirruslabs/flutter:stable содержит
-# Flutter SDK, Android SDK, OpenJDK 17. Версия Flutter — последняя stable.
-# (Раньше брали :3.27.0, но конкретные patch-теги в этом registry не всегда
-# доступны, а stable обновляется вместе с pub-каналом.)
-.flutter-android:
-  # Используем образ Ubuntu и ставим Flutter+SDK вручную. Это надёжнее
-  # сторонних готовых образов, которые часто меняют namespace или layout
-  # (cirruslabs/flutter мигрировали с dockerhub на ghcr и иногда без
-  # самого Flutter в PATH).
-  image: ubuntu:22.04
-  variables:
-    DEBIAN_FRONTEND: noninteractive
-    ANDROID_SDK_ROOT: /opt/android-sdk
-    FLUTTER_HOME: /opt/flutter
-  cache:
-    key: flutter-android-v1
-    paths:
-      - .gradle/
-      - flutter-app/.dart_tool/
-      - flutter-app/build/
+.flutter-shared:
+  tags:
+    - windows
   before_script:
-    # Базовые системные пакеты
-    - apt-get update -qq
-    - apt-get install -y --no-install-recommends curl ca-certificates git unzip xz-utils zip openjdk-17-jdk-headless build-essential pkg-config libssl-dev
-    # Flutter SDK через git
-    - git clone https://github.com/flutter/flutter.git -b stable --depth 1 $FLUTTER_HOME
-    - export PATH="$FLUTTER_HOME/bin:$PATH"
+    # PATH с JDK для Gradle
+    - $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
     - flutter --version
-    # Android SDK через cmdline-tools
-    - mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-    - curl -fsSL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-    - unzip -q /tmp/tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-    - mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
-    - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
-    - yes | sdkmanager --licenses > /dev/null
-    - sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-    # Rust toolchain + Android targets
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
-    - source "$HOME/.cargo/env"
-    - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-    - cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
     - cd flutter-app
     - flutter pub get
-    - flutter_rust_bridge_codegen generate
-    # Восстанавливаем keystore из CI secret
-    - mkdir -p keystore
-    - echo "$KEYSTORE_BASE64" | base64 -d > keystore/stocksi-upload.jks
-    - |
-      cat > android/key.properties <<EOF
-      storePassword=$KEYSTORE_PASSWORD
-      keyPassword=$KEY_PASSWORD
-      keyAlias=$KEY_ALIAS
-      storeFile=../../keystore/stocksi-upload.jks
-      EOF
+    # FRB generated файлы уже в репо, codegen не нужен
+    # Подкладываем keystore + key.properties (которые gitignored)
+    - if (-not (Test-Path keystore)) { New-Item -ItemType Directory -Path keystore | Out-Null }
+    - Copy-Item "$env:LOCAL_KEYSTORE_DIR\stocksi-upload.jks" "keystore\stocksi-upload.jks" -Force
+    - Copy-Item "$env:LOCAL_KEY_PROPERTIES" "android\key.properties" -Force
 
 build_aab:
-  extends: .flutter-android
+  extends: .flutter-shared
   stage: build
   script:
     - flutter build appbundle --release
-    - cp build/app/outputs/bundle/release/app-release.aab ../Ultimate-playstore.aab
+    - Copy-Item "build\app\outputs\bundle\release\app-release.aab" "..\Ultimate-playstore.aab" -Force
   artifacts:
     name: "ultimate-aab-$CI_COMMIT_SHORT_SHA"
     paths:
@@ -87,11 +47,11 @@ build_aab:
     - if: $CI_COMMIT_TAG
 
 build_apk:
-  extends: .flutter-android
+  extends: .flutter-shared
   stage: build
   script:
     - flutter build apk --release
-    - cp build/app/outputs/flutter-apk/app-release.apk ../Ultimate-release.apk
+    - Copy-Item "build\app\outputs\flutter-apk\app-release.apk" "..\Ultimate-release.apk" -Force
   artifacts:
     name: "ultimate-apk-$CI_COMMIT_SHORT_SHA"
     paths:

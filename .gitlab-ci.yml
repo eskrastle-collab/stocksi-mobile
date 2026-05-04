@@ -1,0 +1,76 @@
+# GitLab CI: автосборка Android (AAB + APK) на push в main или тэг.
+# iOS собирается через GitHub Actions на macOS-runner (см. .github/workflows/).
+#
+# Перед использованием — добавить в GitLab Settings → CI/CD → Variables:
+#   KEYSTORE_BASE64     (file) — содержимое keystore/stocksi-upload.jks в base64
+#   KEYSTORE_PASSWORD   (masked, protected)
+#   KEY_PASSWORD        (masked, protected)
+#   KEY_ALIAS           (masked, protected) — обычно "upload"
+#
+# Бесплатный тир GitLab.com даёт 400 минут/мес. Один билд ~10 мин,
+# хватит на 40 релизов.
+
+stages:
+  - build
+
+variables:
+  FLUTTER_VERSION: "3.27.0"
+  GIT_DEPTH: 10
+
+# Шаблон базового окружения. Используем образ Cirrus Labs — там предустановлены
+# Flutter, Android SDK, OpenJDK 17. Поверх ставим Rust toolchain.
+.flutter-android:
+  image: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+  before_script:
+    - apt-get update -qq && apt-get install -y --no-install-recommends curl build-essential pkg-config libssl-dev unzip
+    # Rust toolchain + Android targets
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+    - source "$HOME/.cargo/env"
+    - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+    # flutter_rust_bridge codegen
+    - cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
+    # Кэш, чтобы рефренды dart_tool/build не ломали билды
+    - flutter --version
+    - cd flutter-app
+    - flutter pub get
+    - flutter_rust_bridge_codegen generate
+    # Восстанавливаем keystore из CI secret
+    - mkdir -p keystore
+    - echo "$KEYSTORE_BASE64" | base64 -d > keystore/stocksi-upload.jks
+    - |
+      cat > android/key.properties <<EOF
+      storePassword=$KEYSTORE_PASSWORD
+      keyPassword=$KEY_PASSWORD
+      keyAlias=$KEY_ALIAS
+      storeFile=../../keystore/stocksi-upload.jks
+      EOF
+
+build_aab:
+  extends: .flutter-android
+  stage: build
+  script:
+    - flutter build appbundle --release
+    - cp build/app/outputs/bundle/release/app-release.aab ../Ultimate-playstore.aab
+  artifacts:
+    name: "ultimate-aab-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - Ultimate-playstore.aab
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+
+build_apk:
+  extends: .flutter-android
+  stage: build
+  script:
+    - flutter build apk --release
+    - cp build/app/outputs/flutter-apk/app-release.apk ../Ultimate-release.apk
+  artifacts:
+    name: "ultimate-apk-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - Ultimate-release.apk
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG

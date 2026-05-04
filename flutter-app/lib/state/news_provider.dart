@@ -8,6 +8,7 @@ import 'auth_provider.dart';
 import 'notification_service.dart';
 import 'sound_service.dart';
 import 'text_highlight.dart';
+import 'token_storage.dart';
 
 /// Состояние подключения к серверу.
 enum ConnectionStatus { idle, connecting, connected, disconnected, error }
@@ -197,7 +198,7 @@ class NewsStreamController extends StateNotifier<List<StoringNews>> {
   }
 
   Future<void> _startFromStorage() async {
-    final token = await getToken();
+    final token = await tokenStorage.read();
     if (token == null || token.isEmpty) return;
     _start(token);
   }

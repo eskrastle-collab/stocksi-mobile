@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 import '../src/rust/api/simple.dart';
+import 'token_storage.dart';
 
 /// Состояние авторизации / onboarding-флоу.
 enum AuthStage {
@@ -45,10 +46,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final dbPath = p.join(docs.path, 'stocksi.db');
     await initCore(dbPath: dbPath);
 
-    // Проверяем существующий токен
-    final existing = await getToken();
+    // Проверяем существующий токен через secure storage. Если запускаемся
+    // первый раз после апгрейда — read() сам мигрирует токен из Rust SQLite.
+    final existing = await tokenStorage.read();
     if (existing != null && existing.isNotEmpty) {
-      // Уже авторизованы — сразу в ленту
       state = const AuthState(stage: AuthStage.ready);
     } else {
       state = const AuthState(stage: AuthStage.awaitingToken);
@@ -75,8 +76,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
-    // 3. Токен валиден — сохраняем и показываем «Успех»
-    await setToken(token: trimmed);
+    // 3. Токен валиден — сохраняем в secure storage и показываем «Успех»
+    await tokenStorage.write(trimmed);
     state = const AuthState(stage: AuthStage.success);
   }
 
@@ -92,7 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Стирает сохранённый токен и возвращает приложение к экрану ввода.
   Future<void> resetToken() async {
-    await setToken(token: '');
+    await tokenStorage.delete();
     state = const AuthState(stage: AuthStage.awaitingToken);
   }
 }

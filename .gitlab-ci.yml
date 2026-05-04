@@ -21,13 +21,39 @@ variables:
 # (Раньше брали :3.27.0, но конкретные patch-теги в этом registry не всегда
 # доступны, а stable обновляется вместе с pub-каналом.)
 .flutter-android:
-  image: ghcr.io/cirruslabs/flutter:stable
+  # Используем образ Ubuntu и ставим Flutter+SDK вручную. Это надёжнее
+  # сторонних готовых образов, которые часто меняют namespace или layout
+  # (cirruslabs/flutter мигрировали с dockerhub на ghcr и иногда без
+  # самого Flutter в PATH).
+  image: ubuntu:22.04
+  variables:
+    DEBIAN_FRONTEND: noninteractive
+    ANDROID_SDK_ROOT: /opt/android-sdk
+    FLUTTER_HOME: /opt/flutter
+  cache:
+    key: flutter-android-v1
+    paths:
+      - .gradle/
+      - flutter-app/.dart_tool/
+      - flutter-app/build/
   before_script:
-    - which flutter || (echo "flutter not in PATH, searching..." && find / -name "flutter" -type f 2>/dev/null | head -5)
+    # Базовые системные пакеты
+    - apt-get update -qq
+    - apt-get install -y --no-install-recommends curl ca-certificates git unzip xz-utils zip openjdk-17-jdk-headless build-essential pkg-config libssl-dev
+    # Flutter SDK через git
+    - git clone https://github.com/flutter/flutter.git -b stable --depth 1 $FLUTTER_HOME
+    - export PATH="$FLUTTER_HOME/bin:$PATH"
     - flutter --version
-    - apt-get update -qq && apt-get install -y --no-install-recommends curl build-essential pkg-config libssl-dev unzip
+    # Android SDK через cmdline-tools
+    - mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+    - curl -fsSL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+    - unzip -q /tmp/tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
+    - mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+    - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+    - yes | sdkmanager --licenses > /dev/null
+    - sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
     # Rust toolchain + Android targets
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal
     - source "$HOME/.cargo/env"
     - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
     - cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked

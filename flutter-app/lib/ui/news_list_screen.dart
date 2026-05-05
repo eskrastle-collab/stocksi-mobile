@@ -286,18 +286,23 @@ class _BottomBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      height: 36,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-            width: 0.5,
+    // SafeArea bottom: true даёт inset под системной нав-полосой Android /
+    // home-indicator iPhone X+. Без него BottomBar наезжает на 3-кнопочную
+    // навигацию или жестовую полосу — что заметил RuStore-модератор.
+    return SafeArea(
+      top: false,
+      child: Container(
+        height: 36,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+              width: 0.5,
+            ),
           ),
         ),
-      ),
-      child: Row(
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(width: 14),
@@ -377,6 +382,7 @@ class _BottomBar extends ConsumerWidget {
           ),
           const SizedBox(width: 4),
         ],
+      ),
       ),
     );
   }

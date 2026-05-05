@@ -36,6 +36,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Apple требует iOS 26 SDK / Xcode 26+ для всех новых билдов
+      # в App Store с конца 2025 (validation error -19241).
+      # macos-latest держит несколько Xcode версий параллельно;
+      # latest-stable выбирает самую свежую non-beta.
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Print Xcode version (debug)
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:

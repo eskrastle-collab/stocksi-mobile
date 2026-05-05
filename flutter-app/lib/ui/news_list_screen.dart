@@ -76,6 +76,12 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Тонкая статусная полоса сверху: STOCKSI ULTIMATE + dot
+            // соединения, refresh, тема, mute, настройки. Раньше была внизу
+            // (Scaffold.bottomNavigationBar), но на iPhone нижняя полоса
+            // визуально "терялась" в home-indicator zone. Сверху — компактно
+            // и не зависит от safe area bottom.
+            _TopBar(status: connection.status),
             if (takeoverText != null)
               _SessionTakenOverBanner(
                 text: takeoverText,
@@ -139,7 +145,6 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _BottomBar(status: connection.status),
     );
   }
 }
@@ -280,32 +285,27 @@ class _ScrollTopButton extends StatelessWidget {
   }
 }
 
-class _BottomBar extends ConsumerWidget {
+class _TopBar extends ConsumerWidget {
   final ConnectionStatus status;
-  const _BottomBar({required this.status});
+  const _TopBar({required this.status});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Apple HIG / Material требуют, чтобы фон bottom bar тянулся до самого
-    // края экрана — т. е. под home-indicator на iPhone и под жестовой
-    // полосой Android. Контент (Row с иконками) при этом остаётся в
-    // безопасной зоне через bottom-padding = MediaQuery.padding.bottom.
-    //
-    // Раньше тут стоял SafeArea(top: false), который сдвигал ВЕСЬ
-    // Container на 34px вверх — между баром и нижним краем экрана
-    // оставалась пустая полоса фона Scaffold (заметно на iPhone).
-    final safeBottom = MediaQuery.of(context).padding.bottom;
+    // Тонкая статусная полоса под нативным iOS status bar (часы/батарея).
+    // Раньше эта полоса была внизу (Scaffold.bottomNavigationBar), но на
+    // iPhone X+ home-indicator zone делал визуальный "хвост" под полосой.
+    // Сверху всё проще: бар прижимается к статус-бару системы (внутри
+    // SafeArea родительского Column), без танцев с safe area bottom inset.
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          top: BorderSide(
+          bottom: BorderSide(
             color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
             width: 0.5,
           ),
         ),
       ),
-      padding: EdgeInsets.only(bottom: safeBottom),
       child: SizedBox(
         height: 36,
         child: Row(

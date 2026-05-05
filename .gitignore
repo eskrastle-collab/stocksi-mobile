@@ -1,5 +1,7 @@
 # Flutter SDK (если случайно лежит внутри проекта — не коммитим)
-flutter/
+# Якорим в корне (`/flutter/`) — иначе правило случайно матчит вложенные
+# `flutter-app/ios/Flutter/` и т.п.
+/flutter/
 
 # Build artifacts (Rust + Flutter)
 target/

@@ -1,0 +1,132 @@
+name: iOS Release (TestFlight)
+
+# Подписанная сборка IPA + автозаливка в TestFlight.
+#
+# Запуск:
+#   • вручную через GitHub UI (workflow_dispatch)
+#   • при push тэга вида v0.1.0 (включая release-теги)
+#
+# Требуется наличие следующих GitHub Secrets:
+#   - APPLE_CERTIFICATE_BASE64        — .p12 distribution certificate в base64
+#   - APPLE_CERTIFICATE_PASSWORD      — пароль от .p12
+#   - APPLE_PROVISIONING_PROFILE_BASE64 — .mobileprovision в base64
+#   - APPLE_TEAM_ID                   — 10-символьный Team ID из Apple Developer
+#   - APP_STORE_CONNECT_API_KEY_BASE64 — .p8 ключ App Store Connect API в base64
+#   - APP_STORE_CONNECT_API_KEY_ID    — Key ID (10 символов)
+#   - APP_STORE_CONNECT_API_ISSUER_ID — Issuer ID (UUID)
+#
+# Как получить — см. IOS_SIGNING_SETUP.md в корне репо.
+#
+# Результат: подписанный IPA в артефактах workflow + автоматическая
+# заливка билда в TestFlight (доступен через App Store Connect → TestFlight
+# через ~10-30 минут после успешного запуска).
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.9'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust-core/target
+            flutter-app/rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
+
+      - name: Flutter pub get
+        working-directory: flutter-app
+        run: flutter pub get
+
+      - name: Generate FRB bindings
+        working-directory: flutter-app
+        run: flutter_rust_bridge_codegen generate
+
+      # ───────── Подпись ─────────
+      - name: Import distribution certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Install provisioning profile
+        env:
+          PROFILE_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -e
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          echo -n "$PROFILE_B64" | base64 --decode > "$PROFILES_DIR/stocksi.mobileprovision"
+          # Профайл может иметь любое имя — Xcode читает UUID из содержимого.
+          ls -la "$PROFILES_DIR"
+
+      - name: Inject Team ID into ExportOptions.plist
+        working-directory: flutter-app
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -e
+          sed -i '' "s/__TEAM_ID__/$APPLE_TEAM_ID/g" ios/ExportOptions.plist
+          cat ios/ExportOptions.plist
+
+      - name: Build signed IPA
+        working-directory: flutter-app
+        run: |
+          flutter build ipa --release \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Locate IPA
+        id: ipa
+        working-directory: flutter-app
+        run: |
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "No IPA found"
+            exit 1
+          fi
+          echo "ipa_path=flutter-app/$IPA_PATH" >> "$GITHUB_OUTPUT"
+          ls -lh "$IPA_PATH"
+
+      # ───────── Артефакт ─────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ultimate-ios-signed
+          path: ${{ steps.ipa.outputs.ipa_path }}
+          retention-days: 30
+
+      # ───────── TestFlight ─────────
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v3
+        with:
+          app-path: ${{ steps.ipa.outputs.ipa_path }}
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}

@@ -1,23 +1,17 @@
-name: iOS Build
+name: iOS Build (unsigned, debug)
 
-# Сборка unsigned IPA для iPhone на macOS-runner'е GitHub Actions.
-# Запуск:
-#   • вручную через GitHub UI (workflow_dispatch)
-#   • при push тэга вида v0.1.0
+# Сборка unsigned IPA для отладки.
+# Для релизов в TestFlight/App Store — см. ios-release.yml (подписанный билд).
 #
-# Требования: ничего не нужно настраивать заранее (на runner'е уже
-# установлен Xcode/CocoaPods/Swift). Rust toolchain ставится в шаге
-# с iOS-таргетами.
+# Запуск: только вручную через GitHub UI (workflow_dispatch).
+# Авто-триггер на тэги отключён, чтобы при `git tag v*` запускался ТОЛЬКО
+# подписанный workflow (ios-release.yml).
 #
-# Результат: артефакт `Ultimate-ios.ipa` — unsigned IPA. Установить можно
-# через Sideloadly / AltStore (требует Apple ID, бесплатно, 7-дневный лимит)
-# или подписать своим Apple Developer-сертификатом ($99/год) для App Store.
+# Результат: артефакт `Ultimate-unsigned.ipa` — unsigned IPA для теста через
+# Sideloadly / AltStore (бесплатный Apple ID, 7-дневный лимит).
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 jobs:
   build:

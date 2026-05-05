@@ -556,7 +556,20 @@ class _SwipeableNewsCard extends StatelessWidget {
             icon: Icons.share_outlined,
             label: 'Поделиться',
             color: const Color(0xFF7A5CFA),
-            onTap: () => Share.share(_buildShareText()),
+            // sharePositionOrigin обязателен на iPad (иначе краш) и
+            // желателен на iPhone (без него UIActivityViewController в
+            // отдельных кейсах просто не показывается). Берём прямоугольник
+            // карточки — popover поедет вверх от свайпнутой строки.
+            onTap: () {
+              final box = context.findRenderObject() as RenderBox?;
+              final origin = box != null
+                  ? box.localToGlobal(Offset.zero) & box.size
+                  : null;
+              Share.share(
+                _buildShareText(),
+                sharePositionOrigin: origin,
+              );
+            },
           ),
           if (hasLink)
             _StocksiAction(

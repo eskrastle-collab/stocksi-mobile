@@ -96,10 +96,24 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.share, size: 20),
-            tooltip: 'Поделиться',
-            onPressed: () => Share.share(_buildShareText()),
+          Builder(
+            builder: (btnCtx) => IconButton(
+              icon: const Icon(Icons.share, size: 20),
+              tooltip: 'Поделиться',
+              // sharePositionOrigin обязателен на iPad (иначе краш) и
+              // желателен на iPhone — popover на iPad-е "пристёгнётся"
+              // к самой кнопке share в AppBar.
+              onPressed: () {
+                final box = btnCtx.findRenderObject() as RenderBox?;
+                final origin = box != null
+                    ? box.localToGlobal(Offset.zero) & box.size
+                    : null;
+                Share.share(
+                  _buildShareText(),
+                  sharePositionOrigin: origin,
+                );
+              },
+            ),
           ),
           if (n.fullTextLink != null && n.fullTextLink!.isNotEmpty)
             IconButton(

@@ -64,6 +64,16 @@ class SoundService {
     // audioFocus: none — не отбираем focus, чтобы system notification
     //   не прерывала наш звук
     // contentType: sonification — короткие сигналы, не music
+    //
+    // iOS: playback (а НЕ ambient) — потому что:
+    //   - ambient молчит когда включён silent switch / Mute в Control Center
+    //   - ambient молчит когда экран заблокирован
+    //   - мы — приложение для биржевых алертов, пользователь явно ОЖИДАЕТ
+    //     слышать звук вне зависимости от mute (как WhatsApp call, Twitter
+    //     ping, etc.). Apple это разрешает для приложений с user-initiated
+    //     audio notifications.
+    // duckOthers — наш короткий bleep автоматом приглушит Apple Music
+    //   на время воспроизведения, потом восстановит громкость.
     final ctx = AudioContext(
       android: const AudioContextAndroid(
         isSpeakerphoneOn: false,
@@ -73,10 +83,18 @@ class SoundService {
         audioFocus: AndroidAudioFocus.none,
       ),
       iOS: AudioContextIOS(
-        category: AVAudioSessionCategory.ambient,
-        options: const {AVAudioSessionOptions.mixWithOthers},
+        category: AVAudioSessionCategory.playback,
+        options: const {AVAudioSessionOptions.duckOthers},
       ),
     );
+    // На iOS AudioContext по сути global (одна AVAudioSession на процесс).
+    // Лучше выставить через AudioPlayer.global, чтобы все плееры подхватили
+    // одинаково и без гонки на старте.
+    try {
+      await AudioPlayer.global.setAudioContext(ctx);
+    } catch (e) {
+      debugPrint('[sound] global setAudioContext failed: $e');
+    }
     for (var i = 0; i < _pool.length; i++) {
       final p = _pool[i];
       await p.setReleaseMode(ReleaseMode.stop);

@@ -1,0 +1,84 @@
+<!--
+  Готовый HTML для вставки в блок Tilda (T123 «HTML-код» или T126 «Веб-страница»).
+  Inline-стили — чтобы не зависеть от темы Tilda и работать в любом блоке.
+  Просто скопируй всё содержимое ниже и вставь в HTML-блок Tilda.
+-->
+<div style="max-width: 760px; margin: 0 auto; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2c3e50;">
+
+  <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 8px; color: #1a1a1a;">Политика конфиденциальности</h1>
+  <p style="color: #888; font-size: 14px; margin-top: 0; margin-bottom: 32px;">Последнее обновление: 4 мая 2026 г.</p>
+
+  <p>Stocksi Ultimate (далее — «Приложение») — новостной агрегатор для русскоязычных инвесторов. Приложение разрабатывается командой Stocksi.</p>
+
+  <p>Настоящая политика описывает, какие данные использует Приложение, для чего и кому они передаются.</p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">1. Какие данные мы собираем</h2>
+
+  <p>Приложение <strong>не собирает персональные данные пользователей</strong>. В частности, мы НЕ запрашиваем и НЕ передаём третьим лицам:</p>
+
+  <ul style="padding-left: 24px;">
+    <li>ФИО, дату рождения, паспортные данные;</li>
+    <li>адреса (физические, почтовые, e-mail);</li>
+    <li>список контактов, переписку, фотографии;</li>
+    <li>идентификаторы устройства (IDFA / Android Advertising ID);</li>
+    <li>геолокацию;</li>
+    <li>данные об использовании приложения (аналитика).</li>
+  </ul>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">2. Какие данные хранятся локально</h2>
+
+  <p>Для работы Приложение хранит <strong>только на устройстве пользователя</strong>:</p>
+
+  <ul style="padding-left: 24px;">
+    <li><strong>Токен доступа</strong> (UUID), который пользователь самостоятельно вводит при первом запуске. Токен выдаётся через Telegram-бот <a href="https://t.me/StocksiUltimate_bot" style="color: #336FEE;">@StocksiUltimate_bot</a> и используется только для авторизации на сервере новостей.</li>
+    <li><strong>Пользовательские настройки</strong> — выбранные источники, фильтры, правила подсветки текста, выбранный звук уведомлений, тема оформления.</li>
+    <li><strong>Кэш новостей</strong>, полученных от сервера — для отображения после перезапуска приложения.</li>
+  </ul>
+
+  <p>Все эти данные хранятся в защищённом каталоге Приложения, <strong>не передаются на наши серверы и не покидают устройство</strong>. Токен авторизации хранится в системном хранилище ключей (Android Keystore / iOS Keychain) и не доступен другим приложениям.</p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">3. Сетевые соединения</h2>
+
+  <p>При работе Приложение устанавливает соединения с:</p>
+
+  <ul style="padding-left: 24px;">
+    <li><code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 14px;">wss://websocket.priority.news</code> — WebSocket-канал, по которому сервер шлёт новости. Передаётся: токен авторизации, технические heartbeat-пакеты. <strong>Не передаётся</strong> никакая информация об устройстве, помимо стандартных HTTP-заголовков (User-Agent).</li>
+    <li>Внешние ссылки в текстах новостей и в иконках тикеров — открываются по запросу пользователя в браузере или загружаются как обычные изображения. Никаких track-параметров мы не добавляем.</li>
+  </ul>
+
+  <p>Все соединения используют шифрование TLS 1.2+.</p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">4. Уведомления и сообщения об ошибках</h2>
+
+  <p>Приложение использует системные уведомления Android / iOS и звуки уведомлений. Это происходит <strong>локально</strong>, без участия каких-либо внешних push-сервисов (Firebase Cloud Messaging и т. п.).</p>
+
+  <p>Для повышения качества Приложения мы используем сервис мониторинга крашей. При непредвиденной ошибке программы отправляется обезличенный технический отчёт: тип ошибки, версия приложения, версия операционной системы, модель устройства. <strong>Личные данные, содержимое новостей, токен авторизации в этом отчёте не передаются.</strong></p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">5. Передача данных третьим лицам</h2>
+
+  <p>Stocksi Ultimate <strong>не передаёт пользовательские данные третьим лицам</strong>.</p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">6. Удаление данных</h2>
+
+  <p>Чтобы полностью удалить данные Приложения с устройства:</p>
+
+  <ol style="padding-left: 24px;">
+    <li>Откройте «Настройки» → «Приложения» → «Stocksi Ultimate» → «Хранилище» → «Очистить данные».</li>
+    <li>Или удалите Приложение целиком.</li>
+  </ol>
+
+  <p>Поскольку никаких данных Приложение не передаёт на наши серверы, отдельного запроса на удаление не требуется.</p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">7. Дети</h2>
+
+  <p>Приложение не предназначено для детей младше 13 лет.</p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">8. Изменения политики</h2>
+
+  <p>Мы можем обновлять эту политику. Текущая версия всегда доступна по адресу <a href="https://stocksi-ultimate.ru/privacy" style="color: #336FEE;">stocksi-ultimate.ru/privacy</a>.</p>
+
+  <h2 style="font-size: 22px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: #1a1a1a;">9. Контакты</h2>
+
+  <p>По вопросам конфиденциальности — Telegram <a href="https://t.me/StocksiUltimate_bot" style="color: #336FEE;">@StocksiUltimate_bot</a> или сайт <a href="https://stocksi-ultimate.ru" style="color: #336FEE;">stocksi-ultimate.ru</a>.</p>
+
+</div>

@@ -26,7 +26,19 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized) return;
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidInit);
+    // На iOS системный диалог permission покажется при первом
+    // requestPermission(), не при init() — поэтому requestAlertPermission
+    // и т. п. оставляем false, иначе приложение запросит разрешение сразу
+    // при старте, что плохой UX.
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: iosInit,
+    );
     await _plugin.initialize(initSettings);
 
     // Создаём канал явно (на Android 8+ без этого звук/приоритет не применятся).
@@ -45,15 +57,42 @@ class NotificationService {
     _initialized = true;
   }
 
-  /// Попросить пользователя разрешить уведомления (Android 13+).
+  /// Попросить пользователя разрешить уведомления.
   /// Возвращает true если разрешение дано.
   Future<bool> requestPermission() async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      // На iOS используем нативный API plugin'а — он покажет именно
+      // системный диалог "Stocksi Ultimate would like to send you
+      // notifications". permission_handler на iOS возвращает denied
+      // если приложение никогда его не запрашивало через Darwin API.
+      final iosImpl = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      final granted = await iosImpl?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: false, // звук свой
+          ) ??
+          false;
+      return granted;
+    }
+    // Android 13+ — runtime permission. На <13 status сразу granted.
     final status = await Permission.notification.request();
     return status.isGranted;
   }
 
   /// Проверить не отказал ли пользователь ранее.
   Future<bool> hasPermission() async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final iosImpl = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      // checkPermissions появился в plugin v17 — возвращает текущий статус
+      // без показа диалога. Если приложение никогда не запрашивало —
+      // вернёт NotificationsEnabledOptions(isEnabled: false, isAlertEnabled:
+      // false, ...). Мы трактуем как "нет permission" → пользователь
+      // включит через тумблер, который вызовет requestPermission().
+      final opts = await iosImpl?.checkPermissions();
+      return opts?.isAlertEnabled ?? false;
+    }
     final status = await Permission.notification.status;
     return status.isGranted;
   }
@@ -91,6 +130,12 @@ class NotificationService {
         enableVibration: true,
         ticker: 'Новая новость',
         styleInformation: BigTextStyleInformation(''),
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: false, // звук играет SoundService
+        interruptionLevel: InterruptionLevel.timeSensitive,
       ),
     );
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:swipeable_page_route/swipeable_page_route.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -658,17 +659,25 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
     final pushEnabled = ref.watch(pushEnabledProvider);
     Future<void> togglePush(bool v) async {
       if (v) {
-        // Спрашиваем разрешение на показ уведомлений (Android 13+)
+        // Спрашиваем разрешение на показ уведомлений.
+        // На Android 13+ покажет runtime-диалог permission_handler.
+        // На iOS — нативный системный диалог через DarwinPlugin.
+        // Если пользователь ранее отказал — диалог НЕ показывается
+        // повторно (iOS политика), нужно вести его в Settings вручную.
         final granted = await notificationService.requestPermission();
         if (!granted) {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
+            SnackBar(
+              content: const Text(
                 'Разрешение на уведомления не выдано. '
                 'Включите его в настройках системы.',
               ),
-              duration: Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Открыть',
+                onPressed: () => openAppSettings(),
+              ),
+              duration: const Duration(seconds: 8),
             ),
           );
           return;

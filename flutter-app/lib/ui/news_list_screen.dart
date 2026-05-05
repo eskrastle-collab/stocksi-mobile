@@ -286,22 +286,28 @@ class _BottomBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // SafeArea bottom: true даёт inset под системной нав-полосой Android /
-    // home-indicator iPhone X+. Без него BottomBar наезжает на 3-кнопочную
-    // навигацию или жестовую полосу — что заметил RuStore-модератор.
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 36,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-              width: 0.5,
-            ),
+    // Apple HIG / Material требуют, чтобы фон bottom bar тянулся до самого
+    // края экрана — т. е. под home-indicator на iPhone и под жестовой
+    // полосой Android. Контент (Row с иконками) при этом остаётся в
+    // безопасной зоне через bottom-padding = MediaQuery.padding.bottom.
+    //
+    // Раньше тут стоял SafeArea(top: false), который сдвигал ВЕСЬ
+    // Container на 34px вверх — между баром и нижним краем экрана
+    // оставалась пустая полоса фона Scaffold (заметно на iPhone).
+    final safeBottom = MediaQuery.of(context).padding.bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            width: 0.5,
           ),
         ),
+      ),
+      padding: EdgeInsets.only(bottom: safeBottom),
+      child: SizedBox(
+        height: 36,
         child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

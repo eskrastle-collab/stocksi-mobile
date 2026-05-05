@@ -27,6 +27,13 @@ class NewsListScreen extends ConsumerStatefulWidget {
 class _NewsListScreenState extends ConsumerState<NewsListScreen> {
   final ScrollController _scrollCtrl = ScrollController();
   bool _showScrollTop = false;
+  // Top-bar по умолчанию видим (иначе на первом запуске пользователь не
+  // найдёт настройки). Свайп вниз на ленте — toggle.
+  bool _topBarVisible = true;
+  // Накопитель overscroll для жеста "pull-down". Когда суммарно больше
+  // _kPullThreshold пикселей — переключаем видимость top-bar.
+  double _overscrollAccum = 0;
+  static const double _kPullThreshold = 80;
 
   @override
   void initState() {
@@ -48,11 +55,26 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
     super.dispose();
   }
 
-  Future<void> _handleRefresh() async {
-    // forceReconnect рвёт WS, ждёт 3 сек чтобы сервер увидел разрыв,
-    // потом подключается заново. По возвращении приходит NewsHistory →
-    // лента обновится. Pull-индикатор сбрасывается когда future завершён.
-    await ref.read(newsControllerProvider.notifier).forceReconnect();
+  // forceReconnect раньше был на pull-to-refresh, но теперь pull-down
+  // переключает top-bar; ручной reconnect остался только в самом баре
+  // (кнопка refresh icon) и в _SessionTakenOverBanner.
+
+  /// Обработка скролл-нотификаций для toggle top-bar.
+  /// Жест: пользователь тянет ленту ВНИЗ когда она уже на самом верху —
+  /// это OverscrollNotification с overscroll < 0. Накапливаем абсолютное
+  /// значение, и когда оно превысит порог — переключаем видимость bar.
+  bool _onScrollNotification(ScrollNotification n) {
+    if (n is OverscrollNotification && n.overscroll < 0) {
+      _overscrollAccum += -n.overscroll;
+      if (_overscrollAccum >= _kPullThreshold) {
+        _overscrollAccum = 0;
+        HapticFeedback.lightImpact();
+        setState(() => _topBarVisible = !_topBarVisible);
+      }
+    } else if (n is ScrollEndNotification) {
+      _overscrollAccum = 0;
+    }
+    return false;
   }
 
   void _scrollToTop() {
@@ -77,11 +99,19 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
         child: Column(
           children: [
             // Тонкая статусная полоса сверху: STOCKSI ULTIMATE + dot
-            // соединения, refresh, тема, mute, настройки. Раньше была внизу
-            // (Scaffold.bottomNavigationBar), но на iPhone нижняя полоса
-            // визуально "терялась" в home-indicator zone. Сверху — компактно
-            // и не зависит от safe area bottom.
-            _TopBar(status: connection.status),
+            // соединения, refresh, тема, mute, настройки.
+            // Toggle через свайп вниз на ленте (см. _onScrollNotification).
+            // AnimatedSize плавно меняет высоту 36 ↔ 0 за 200ms.
+            // Пустую ленту bar показывает всегда — иначе пользователю
+            // некуда жать settings/refresh, лента не скроллится =>
+            // pull-down toggle недоступен. Поэтому forceShow = items пуст.
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              child: (_topBarVisible || items.isEmpty)
+                  ? _TopBar(status: connection.status)
+                  : const SizedBox(width: double.infinity, height: 0),
+            ),
             if (takeoverText != null)
               _SessionTakenOverBanner(
                 text: takeoverText,
@@ -108,9 +138,12 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
                 children: [
                   items.isEmpty
                       ? _EmptyState(connection: connection)
-                      : RefreshIndicator(
-                          onRefresh: _handleRefresh,
-                          color: const Color(0xFF4C9EFF),
+                      // Pull-down теперь не делает forceReconnect (для этого
+                      // есть отдельная кнопка refresh в top-bar), а служит
+                      // только для toggle-меню — ловим overscroll сами через
+                      // NotificationListener вместо RefreshIndicator.
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: _onScrollNotification,
                           child: SlidableAutoCloseBehavior(
                             child: ListView.separated(
                               controller: _scrollCtrl,
@@ -126,10 +159,13 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
                             ),
                           ),
                         ),
-                  // Плавающая кнопка «Наверх»
+                  // Плавающая кнопка «Наверх» — внизу справа, как FAB.
+                  // Раньше была вверху справа, но это ломало UX: при ленте
+                  // в 100+ новостей пальцу неудобно тянуться к верху, FAB
+                  // в нижнем углу — стандарт Material/iOS.
                   Positioned(
-                    top: 8,
-                    right: 10,
+                    bottom: 16,
+                    right: 16,
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
                       opacity: _showScrollTop ? 1 : 0,
@@ -440,11 +476,14 @@ class _ConnectionDotState extends State<_ConnectionDot>
   @override
   Widget build(BuildContext context) {
     final color = switch (widget.status) {
-      ConnectionStatus.connected => const Color(0xFF2EA44F),
-      ConnectionStatus.connecting => const Color(0xFFFFC773),
-      ConnectionStatus.disconnected => const Color(0xFF8CA7BE),
+      ConnectionStatus.connected => const Color(0xFF2EA44F), // зелёный
+      ConnectionStatus.connecting => const Color(0xFFFFC773), // янтарный
+      // disconnected/idle/error — все три "нет соединения" → красный.
+      // Раньше disconnected был серым (0xFF8CA7BE), но он плохо
+      // воспринимается как тревога, выглядел как "режим бездействия".
+      ConnectionStatus.disconnected => const Color(0xFFE85454),
       ConnectionStatus.error => const Color(0xFFE85454),
-      ConnectionStatus.idle => const Color(0xFF8CA7BE),
+      ConnectionStatus.idle => const Color(0xFFE85454),
     };
     final shouldPulse = widget.status == ConnectionStatus.connecting;
     return AnimatedBuilder(

@@ -818,7 +818,11 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
                 OutlinedButton.icon(
                   icon: const Icon(Icons.play_arrow, size: 18),
                   label: const Text('Тест звука'),
-                  onPressed: () => soundService.play(),
+                  // playLoud — играет даже когда iPhone в silent mode,
+                  // чтобы пользователь смог проверить выбранный звук
+                  // независимо от рычажка mute. После окончания теста
+                  // sound service возвращает обычный ambient.
+                  onPressed: () => soundService.playLoud(),
                 ),
               ],
             ),
@@ -980,7 +984,9 @@ class _AlertRowState extends State<_AlertRow> {
                       if (v == null) return;
                       setState(() => _sound = v);
                       _apply();
-                      soundService.playOnce(v);
+                      // Preview звука хэштег-алерта — тоже играет в silent
+                      // mode, иначе пользователь не понимает что выбрал.
+                      soundService.playOnceLoud(v);
                     },
                   ),
                 ),

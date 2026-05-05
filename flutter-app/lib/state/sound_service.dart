@@ -175,6 +175,86 @@ class SoundService {
     await playOnce(_soundName);
   }
 
+  /// Громкая проверка звука — играет вне зависимости от silent switch.
+  /// Используется ТОЛЬКО для теста звуков в настройках, чтобы пользователь
+  /// мог прослушать выбранный звук даже когда iPhone в silent mode (mute
+  /// rocker / control center). Реализация: временно переключаем
+  /// AVAudioSession iOS на playback, играем, возвращаем на ambient.
+  ///
+  /// Также игнорирует флаг `_enabled` — пользователь может тестировать звук
+  /// до того как включил уведомления.
+  Future<void> playOnceLoud(String soundName) async {
+    if (!kAvailableSounds.contains(soundName)) return;
+    final loudCtx = AudioContext(
+      android: const AudioContextAndroid(
+        isSpeakerphoneOn: false,
+        stayAwake: false,
+        contentType: AndroidContentType.sonification,
+        usageType: AndroidUsageType.media,
+        audioFocus: AndroidAudioFocus.none,
+      ),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playback,
+        options: const {AVAudioSessionOptions.duckOthers},
+      ),
+    );
+    final quietCtx = AudioContext(
+      android: const AudioContextAndroid(
+        isSpeakerphoneOn: false,
+        stayAwake: false,
+        contentType: AndroidContentType.sonification,
+        usageType: AndroidUsageType.media,
+        audioFocus: AndroidAudioFocus.none,
+      ),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.ambient,
+        options: const {AVAudioSessionOptions.duckOthers},
+      ),
+    );
+    try {
+      // Временный громкий context.
+      try {
+        await AudioPlayer.global.setAudioContext(loudCtx);
+      } catch (e) {
+        debugPrint('[sound] loud context set failed: $e');
+      }
+      // Принудительный воспроизв (игнорирует _enabled).
+      final idx = _nextIdx;
+      final player = _pool[idx];
+      _nextIdx = (_nextIdx + 1) % _poolSize;
+      try {
+        if (_preloaded[idx] == soundName) {
+          await player.seek(Duration.zero);
+          await player.resume();
+        } else {
+          await player.stop();
+          await player.play(
+            AssetSource('sounds/$soundName.mp3'),
+            volume: _volume,
+          );
+          _preloaded[idx] = soundName;
+        }
+      } catch (e) {
+        debugPrint('[sound] loud play failed: $e');
+      }
+      // Дать звуку доиграть. Все наши звуки 1-2 сек, 2.5 — с запасом.
+      await Future.delayed(const Duration(milliseconds: 2500));
+    } finally {
+      // Вернуть тихий ambient — иначе real-news будут громко лезть и в
+      // silent mode после теста.
+      try {
+        await AudioPlayer.global.setAudioContext(quietCtx);
+      } catch (e) {
+        debugPrint('[sound] restore ambient failed: $e');
+      }
+    }
+  }
+
+  /// Громкая проверка дефолтного звука (для кнопки "Тест звука").
+  Future<void> playLoud() async {
+    await playOnceLoud(_soundName);
+  }
+
   /// Однократно проиграть указанный звук (для хэштег-алертов).
   /// Запускает на следующем плеере в пуле — это позволяет перекрывать
   /// звуки если новости идут часто, не обрывая предыдущий.

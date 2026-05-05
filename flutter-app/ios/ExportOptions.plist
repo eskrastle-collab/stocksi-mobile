@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Шаблон ExportOptions для `flutter build ipa`. Используется в
+  ExportOptions для `flutter build ipa`. Используется в
   `.github/workflows/ios-release.yml` (подписанный TestFlight-билд).
 
-  Перед сборкой workflow подставляет реальный Team ID через `sed`:
-    sed -i '' "s/__TEAM_ID__/$APPLE_TEAM_ID/g" ios/ExportOptions.plist
+  Manual signing: Team ID и provisioning profile вшиты в pbxproj
+  (Runner target Release/Profile config), и тут продублированы для
+  xcodebuild -exportArchive.
 
   method=app-store — экспорт для App Store / TestFlight.
-  signingStyle=manual — используем заранее установленный provisioning profile
-  (apple-actions/import-codesign-certs + apple-actions/download-provisioning-profiles
-  кладут .mobileprovision в ~/Library/MobileDevice/Provisioning Profiles/, а Xcode
-  сам подхватывает его по bundle id).
 -->
 <plist version="1.0">
 <dict>
@@ -19,10 +16,19 @@
     <string>app-store</string>
 
     <key>teamID</key>
-    <string>__TEAM_ID__</string>
+    <string>923976S3S8</string>
 
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>ru.stocksi.ultimate</key>
+        <string>Stocksi Ultimate AppStore</string>
+    </dict>
+
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
 
     <key>uploadBitcode</key>
     <false/>

@@ -87,14 +87,21 @@ jobs:
           # Профайл может иметь любое имя — Xcode читает UUID из содержимого.
           ls -la "$PROFILES_DIR"
 
-      - name: Inject Team ID into ExportOptions.plist
-        working-directory: flutter-app
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Verify signing setup (debug)
         run: |
-          set -e
-          sed -i '' "s/__TEAM_ID__/$APPLE_TEAM_ID/g" ios/ExportOptions.plist
-          cat ios/ExportOptions.plist
+          echo "=== Code signing identities in keychain ==="
+          security find-identity -v -p codesigning || true
+          echo ""
+          echo "=== Installed provisioning profiles ==="
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles/" || true
+          echo ""
+          echo "=== Profile metadata (UUID, Name, TeamIdentifier) ==="
+          for p in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+            echo "--- $p ---"
+            security cms -D -i "$p" 2>/dev/null | plutil -extract UUID raw -o - - || true
+            security cms -D -i "$p" 2>/dev/null | plutil -extract Name raw -o - - || true
+            security cms -D -i "$p" 2>/dev/null | plutil -extract TeamIdentifier.0 raw -o - - || true
+          done
 
       - name: Build signed IPA
         working-directory: flutter-app

@@ -65,15 +65,16 @@ class SoundService {
     //   не прерывала наш звук
     // contentType: sonification — короткие сигналы, не music
     //
-    // iOS: playback (а НЕ ambient) — потому что:
-    //   - ambient молчит когда включён silent switch / Mute в Control Center
-    //   - ambient молчит когда экран заблокирован
-    //   - мы — приложение для биржевых алертов, пользователь явно ОЖИДАЕТ
-    //     слышать звук вне зависимости от mute (как WhatsApp call, Twitter
-    //     ping, etc.). Apple это разрешает для приложений с user-initiated
-    //     audio notifications.
-    // duckOthers — наш короткий bleep автоматом приглушит Apple Music
-    //   на время воспроизведения, потом восстановит громкость.
+    // iOS: ambient — уважает silent switch на iPhone (когда рычажок mute
+    //   включён, наши звуки молчат, как и системные уведомления). Это
+    //   осознанный выбор — пользователь поставил silent, и app не должно
+    //   его перебивать.
+    // duckOthers — короткий bleep приглушает Apple Music / Spotify на
+    //   время воспроизведения и потом возвращает громкость. Без этой
+    //   опции наш звук тонет в музыке (mixWithOthers просто играет
+    //   поверх с одинаковой громкостью).
+    // Если нужно "пробивать" silent switch — сменить ambient -> playback,
+    //   но мы намеренно этого не делаем.
     final ctx = AudioContext(
       android: const AudioContextAndroid(
         isSpeakerphoneOn: false,
@@ -83,7 +84,7 @@ class SoundService {
         audioFocus: AndroidAudioFocus.none,
       ),
       iOS: AudioContextIOS(
-        category: AVAudioSessionCategory.playback,
+        category: AVAudioSessionCategory.ambient,
         options: const {AVAudioSessionOptions.duckOthers},
       ),
     );

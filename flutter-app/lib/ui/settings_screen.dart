@@ -1101,7 +1101,7 @@ class _AboutTab extends ConsumerWidget {
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
           subtitle: const Text(
-            'Полностью выйти и остановить WS-подключение',
+            'Закрыть приложение и остановить WS-подключение',
             style: TextStyle(fontSize: 12),
           ),
           onTap: () async {

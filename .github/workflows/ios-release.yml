@@ -130,10 +130,24 @@ jobs:
           retention-days: 30
 
       # ───────── TestFlight ─────────
+      # apple-actions/upload-testflight-build@v3 ждёт `api-private-key`
+      # в plain-text (PEM), а у нас secret в base64. Декодим в env.
+      - name: Decode App Store Connect API key
+        env:
+          KEY_B64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          set -e
+          KEY=$(echo "$KEY_B64" | base64 -d)
+          {
+            echo "APP_STORE_CONNECT_API_KEY<<APPLE_KEY_EOF"
+            echo "$KEY"
+            echo "APPLE_KEY_EOF"
+          } >> "$GITHUB_ENV"
+
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v3
         with:
           app-path: ${{ steps.ipa.outputs.ipa_path }}
           issuer-id: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
           api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          api-private-key: ${{ env.APP_STORE_CONNECT_API_KEY }}

@@ -48,13 +48,6 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
     super.dispose();
   }
 
-  /// Pull-to-refresh = forceReconnect. Рвёт WS, ждёт 3 сек чтобы сервер
-  /// увидел разрыв, потом подключается заново. По возвращении приходит
-  /// NewsHistory → лента обновится.
-  Future<void> _handleRefresh() async {
-    await ref.read(newsControllerProvider.notifier).forceReconnect();
-  }
-
   void _scrollToTop() {
     _scrollCtrl.animateTo(
       0,
@@ -105,21 +98,21 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
                 children: [
                   items.isEmpty
                       ? _EmptyState(connection: connection)
-                      : RefreshIndicator(
-                          onRefresh: _handleRefresh,
-                          color: const Color(0xFF4C9EFF),
-                          child: SlidableAutoCloseBehavior(
-                            child: ListView.separated(
-                              controller: _scrollCtrl,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.all(12),
-                              itemCount: items.length,
-                              separatorBuilder: (_, __) =>
-                                  const Divider(height: 12),
-                              itemBuilder: (context, i) => _SwipeableNewsCard(
-                                key: ValueKey(items[i].id),
-                                news: items[i],
-                              ),
+                      // Pull-to-refresh убран по просьбе пользователя — WS
+                      // и так держит ленту актуальной, а ручной reconnect
+                      // доступен по кнопке refresh в bottom bar (рядом с
+                      // дотом статуса) и в _SessionTakenOverBanner.
+                      : SlidableAutoCloseBehavior(
+                          child: ListView.separated(
+                            controller: _scrollCtrl,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(12),
+                            itemCount: items.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 12),
+                            itemBuilder: (context, i) => _SwipeableNewsCard(
+                              key: ValueKey(items[i].id),
+                              news: items[i],
                             ),
                           ),
                         ),
@@ -325,7 +318,7 @@ class _BottomBar extends ConsumerWidget {
         children: [
           const SizedBox(width: 14),
           const Text(
-            'STOCKSI ULTIMATE',
+            'ULTIMATE CONNECT',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w400,

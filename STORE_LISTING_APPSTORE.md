@@ -103,7 +103,7 @@ Stocksi Ultimate — новостной агрегатор для активны
 • Гибкие фильтры — чёрные и белые списки тикеров, хэштегов, ключевых фраз. Хотите видеть только дивиденды? Только санкции? Настраивается в одно касание.
 • Подсветка текста — собственный DSL: задаёте правила вида «дивиденды@green» и слово автоматически выделяется в каждой новости. Поддержка цвета, фона, размера и веса шрифта.
 • Звуковые алерты — отдельные звуки для разных категорий новостей. Например, отчётность играет одним звуком, санкции — другим.
-• Уведомления — приходят даже когда экран заблокирован, через системный центр уведомлений iOS.
+• Уведомления — локальные системные уведомления iOS о новых новостях, пока приложение запущено.
 • Тёмная и светлая темы — переключаются одной кнопкой.
 • Свайп-жесты — поделиться, скопировать, открыть оригинал, вернуться назад.
 
@@ -179,7 +179,7 @@ FEATURES
 • Flexible filters — black and white lists for tickers, hashtags, keywords. Only want dividends? Only sanctions? One tap.
 • Text highlighting — a custom DSL: define rules like "dividends@green" and the word is automatically highlighted in every news item. Full CSS color, background, font-size, and font-weight support.
 • Sound alerts — different sounds for different news categories. Earnings reports play one sound, sanctions play another.
-• Notifications — delivered to iOS notification center even when the screen is locked.
+• Notifications — local iOS system notifications for new news while the app is running.
 • Light and dark themes — toggle with one tap.
 • Swipe gestures — share, copy, open source, navigate back.
 

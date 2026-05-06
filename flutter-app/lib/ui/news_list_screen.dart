@@ -27,13 +27,6 @@ class NewsListScreen extends ConsumerStatefulWidget {
 class _NewsListScreenState extends ConsumerState<NewsListScreen> {
   final ScrollController _scrollCtrl = ScrollController();
   bool _showScrollTop = false;
-  // Top-bar по умолчанию видим (иначе на первом запуске пользователь не
-  // найдёт настройки). Свайп вниз на ленте — toggle.
-  bool _topBarVisible = true;
-  // Накопитель overscroll для жеста "pull-down". Когда суммарно больше
-  // _kPullThreshold пикселей — переключаем видимость top-bar.
-  double _overscrollAccum = 0;
-  static const double _kPullThreshold = 80;
 
   @override
   void initState() {
@@ -55,26 +48,11 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
     super.dispose();
   }
 
-  // forceReconnect раньше был на pull-to-refresh, но теперь pull-down
-  // переключает top-bar; ручной reconnect остался только в самом баре
-  // (кнопка refresh icon) и в _SessionTakenOverBanner.
-
-  /// Обработка скролл-нотификаций для toggle top-bar.
-  /// Жест: пользователь тянет ленту ВНИЗ когда она уже на самом верху —
-  /// это OverscrollNotification с overscroll < 0. Накапливаем абсолютное
-  /// значение, и когда оно превысит порог — переключаем видимость bar.
-  bool _onScrollNotification(ScrollNotification n) {
-    if (n is OverscrollNotification && n.overscroll < 0) {
-      _overscrollAccum += -n.overscroll;
-      if (_overscrollAccum >= _kPullThreshold) {
-        _overscrollAccum = 0;
-        HapticFeedback.lightImpact();
-        setState(() => _topBarVisible = !_topBarVisible);
-      }
-    } else if (n is ScrollEndNotification) {
-      _overscrollAccum = 0;
-    }
-    return false;
+  /// Pull-to-refresh = forceReconnect. Рвёт WS, ждёт 3 сек чтобы сервер
+  /// увидел разрыв, потом подключается заново. По возвращении приходит
+  /// NewsHistory → лента обновится.
+  Future<void> _handleRefresh() async {
+    await ref.read(newsControllerProvider.notifier).forceReconnect();
   }
 
   void _scrollToTop() {
@@ -95,23 +73,12 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
     final takeoverText = ref.watch(sessionTakenOverProvider);
 
     return Scaffold(
+      // bottom: false — bottom inset забирает _BottomBar (там фон растянут
+      // до низа экрана, а иконки центрированы в полной высоте 36+inset).
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            // Тонкая статусная полоса сверху: STOCKSI ULTIMATE + dot
-            // соединения, refresh, тема, mute, настройки.
-            // Toggle через свайп вниз на ленте (см. _onScrollNotification).
-            // AnimatedSize плавно меняет высоту 36 ↔ 0 за 200ms.
-            // Пустую ленту bar показывает всегда — иначе пользователю
-            // некуда жать settings/refresh, лента не скроллится =>
-            // pull-down toggle недоступен. Поэтому forceShow = items пуст.
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              child: (_topBarVisible || items.isEmpty)
-                  ? _TopBar(status: connection.status)
-                  : const SizedBox(width: double.infinity, height: 0),
-            ),
             if (takeoverText != null)
               _SessionTakenOverBanner(
                 text: takeoverText,
@@ -138,12 +105,9 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
                 children: [
                   items.isEmpty
                       ? _EmptyState(connection: connection)
-                      // Pull-down теперь не делает forceReconnect (для этого
-                      // есть отдельная кнопка refresh в top-bar), а служит
-                      // только для toggle-меню — ловим overscroll сами через
-                      // NotificationListener вместо RefreshIndicator.
-                      : NotificationListener<ScrollNotification>(
-                          onNotification: _onScrollNotification,
+                      : RefreshIndicator(
+                          onRefresh: _handleRefresh,
+                          color: const Color(0xFF4C9EFF),
                           child: SlidableAutoCloseBehavior(
                             child: ListView.separated(
                               controller: _scrollCtrl,
@@ -181,6 +145,7 @@ class _NewsListScreenState extends ConsumerState<NewsListScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: _BottomBar(status: connection.status),
     );
   }
 }
@@ -321,27 +286,38 @@ class _ScrollTopButton extends StatelessWidget {
   }
 }
 
-class _TopBar extends ConsumerWidget {
+class _BottomBar extends ConsumerWidget {
   final ConnectionStatus status;
-  const _TopBar({required this.status});
+  const _BottomBar({required this.status});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Тонкая статусная полоса под нативным iOS status bar (часы/батарея).
-    // Раньше эта полоса была внизу (Scaffold.bottomNavigationBar), но на
-    // iPhone X+ home-indicator zone делал визуальный "хвост" под полосой.
-    // Сверху всё проще: бар прижимается к статус-бару системы (внутри
-    // SafeArea родительского Column), без танцев с safe area bottom inset.
+    // Bottom bar занимает home-indicator zone на iPhone X+: фон тянется до
+    // самого низа экрана, иконки центрированы по полной высоте через
+    // symmetric vertical padding = safeBottom/2.
+    //
+    // Math:
+    //   total_height = padding_top + 36 + padding_bottom
+    //                = safeBottom/2 + 36 + safeBottom/2
+    //                = 36 + safeBottom (≈ 70px на iPhone X+, 36px на Android)
+    //   Row сидит ровно по центру.
+    //
+    // Раньше иконки были в верхних 36px растянутого фона → под ними
+    // оставалась "пустая" 34px полоса → выглядело как два отдельных
+    // элемента. Симметричное центрирование делает плашку визуально
+    // цельной — как нативные iOS tab-bar.
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(
+          top: BorderSide(
             color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
             width: 0.5,
           ),
         ),
       ),
+      padding: EdgeInsets.symmetric(vertical: safeBottom / 2),
       child: SizedBox(
         height: 36,
         child: Row(

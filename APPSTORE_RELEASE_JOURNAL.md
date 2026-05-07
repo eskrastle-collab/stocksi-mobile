@@ -12,7 +12,7 @@
 **Bundle ID:** `ru.stocksi.ultimate`
 **Apple ID:** `6766567212`
 **Apple Team ID:** `923976S3S8`
-**Текущий статус:** v1.0.9 (build 10) отправлен в App Store на review **2026-05-07**.
+**Текущий статус:** ✅ **РЕЛИЗ** — v1.0.9 (build 10) одобрен Apple и опубликован в App Store **2026-05-07/08**. Прошли review с первой попытки.
 
 ---
 
@@ -158,6 +158,14 @@ PYTHONIOENCODING=utf-8 python scripts/make_appstore_screenshots.py
 Дата отправки: **2026-05-07**.
 Ожидаемый срок проверки: 24–48 часов.
 
+### Этап 10 — Approved & Released ✅
+
+**Дата релиза: 2026-05-07/08.** Apple одобрил с первой попытки, без замечаний.
+Приложение доступно в App Store по ссылке:
+```
+https://apps.apple.com/app/id6766567212
+```
+
 ---
 
 ## Что НЕ сделано / Roadmap
@@ -244,4 +252,4 @@ C:\Users\eskra\Downloads\appstore-screenshots\          скрины
 
 ---
 
-*Последнее обновление: 2026-05-07 (день Submit for Review).*
+*Последнее обновление: 2026-05-08 (релиз в App Store).*

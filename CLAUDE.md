@@ -15,7 +15,8 @@
 
 См. полную хронологию: **[`APPSTORE_RELEASE_JOURNAL.md`](./APPSTORE_RELEASE_JOURNAL.md)** ← начни отсюда
 
-Кратко: **v1.0.9 (build 10) отправлен в App Store на review 2026-05-07**, ждём результата 24–48 часов.
+Кратко: ✅ **РЕЛИЗ** — v1.0.9 (build 10) опубликован в App Store **2026-05-07/08**.
+App Store: https://apps.apple.com/app/id6766567212
 
 ## Где что лежит
 

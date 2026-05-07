@@ -5,7 +5,12 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<string>ru</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ru</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Ultimate</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

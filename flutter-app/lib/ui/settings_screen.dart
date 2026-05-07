@@ -407,7 +407,7 @@ class _HighlightSectionState extends ConsumerState<_HighlightSection> {
                   child: OutlinedButton.icon(
                     onPressed: _apply,
                     icon: const Icon(Icons.save_outlined, size: 16),
-                    label: const Text('Применить',
+                    label: const Text('Сохранить',
                         style: TextStyle(fontSize: 12)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
@@ -839,14 +839,6 @@ class _NotificationsTabState extends ConsumerState<_NotificationsTab> {
           child: Text(
             'Алерты по хэштегам',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            'Каждое правило: хэштеги → звук. Срабатывает если новость содержит ВСЕ указанные хэштеги.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
         const SizedBox(height: 10),
